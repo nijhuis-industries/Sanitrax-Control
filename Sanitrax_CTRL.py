@@ -620,6 +620,9 @@ def main(mode):
     antifreeze_pump_dict = dict(zip(AntiFreeze_Status, modbus_values[15:28] + modbus_values[39:42]))
     temperature_dict = dict(zip(Temperature, modbus_values[43:46]))
 
+    # Create list of actual faults for history
+    fault_list = [fault for fault in fault_dict if fault_dict[fault] == 1]
+
     # Value scaling
     modbus_dict["mb_p1_Vac"] = ((modbus_dict["mb_p1_Vac"] - RAW_FACTOR) / RAW_DIF) - 1
     modbus_dict["mb_p2_Vac"] = ((modbus_dict["mb_p2_Vac"] - RAW_FACTOR) / RAW_DIF) - 1
@@ -869,6 +872,7 @@ def main(mode):
         http_post_json(proxy, '/api/v2/modules/' + dbkey + '/history/pump2Pressure', modbus_dict["mb_p2_Vac"])
         http_post_json(proxy, '/api/v2/modules/' + dbkey + '/history/pump2Temperature', modbus_dict["mb_p2_Temp"])
         http_post_json(proxy, '/api/v2/modules/' + dbkey + '/history/pump2Voltage', modbus_dict["mb_p2_Mains_Volt"])
+        http_post_json(proxy, '/api/v2/modules/' + dbkey + '/history/errors', fault_list)
 
 
 if __name__ == "__main__":
