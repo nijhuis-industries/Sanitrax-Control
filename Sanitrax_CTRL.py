@@ -38,10 +38,12 @@ RAW_FACTOR = 4630
 RAW_DIF = 14050
 
 # Raw value for 60 degrees (absence of calculation origin)
-RAW_TEMP_60 = 8000
+RAW_TEMP_MAX = 10000
+RAW_TEMP_MIN = 0
 
 # Actual temperature value in Celsius degrees value equilavent to 8000
-TEMP = 60
+TEMP_MAX = 100
+TEMP_MIN = -100
 
 # STRING TUPLES AND DICTIONARIES
 modbus_keys = ('mb_magic',  # Used for API version (R) and special functions (W)
@@ -559,6 +561,20 @@ def prepareData(modbus_values):
     return tuple(values)
 
 
+## Scale analog value
+#  @param raw_in as integer for raw analog value
+#  @param raw_min as integer for minimum raw analog value
+#  @param raw_max as integer for maximum raw analog value
+#  @param eng_min as integer for minimum engineering value
+#  @param eng_max as integer for maximum engineering value
+#  @return as integer for scaled engineering value
+def scale_analog(*, raw_in: int, raw_min: int, raw_max: int, eng_min: int, eng_max: int) -> int:
+    raw_range = raw_max - raw_min
+    eng_range = eng_max - eng_min
+    value = ((((raw_in - raw_min) / raw_range) * eng_range) + eng_min)
+    return int(value)
+
+
 def main(mode):
     modbus_values = modbus_read(0, 95)
     if modbus_values == "error":
@@ -624,8 +640,17 @@ def main(mode):
     modbus_dict["mb_p1_Vac"] = ((modbus_dict["mb_p1_Vac"] - RAW_FACTOR) / RAW_DIF) - 1
     modbus_dict["mb_p2_Vac"] = ((modbus_dict["mb_p2_Vac"] - RAW_FACTOR) / RAW_DIF) - 1
 
-    modbus_dict["mb_p1_Temp"] = (modbus_dict["mb_p1_Temp"] * TEMP) / RAW_TEMP_60    
-    modbus_dict["mb_p2_Temp"] = (modbus_dict["mb_p2_Temp"] * TEMP) / RAW_TEMP_60
+    modbus_dict["mb_p1_Temp"] = scale_analog(raw_in=modbus_dict["mb_p1_Temp"],
+                                             raw_min=RAW_TEMP_MIN,
+                                             raw_max=RAW_TEMP_MAX,
+                                             eng_min=TEMP_MIN,
+                                             eng_max=TEMP_MAX)
+
+    modbus_dict["mb_p2_Temp"] = scale_analog(raw_in=modbus_dict["mb_p2_Temp"],
+                                             raw_min=RAW_TEMP_MIN,
+                                             raw_max=RAW_TEMP_MAX,
+                                             eng_min=TEMP_MIN,
+                                             eng_max=TEMP_MAX)
 
     modbus_dict["mb_p1_Motor_Current"] /= 10
     modbus_dict["mb_p2_Motor_Current"] /= 10
